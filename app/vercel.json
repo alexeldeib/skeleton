@@ -1,0 +1,19 @@
+{
+  "buildCommand": "cd .. && npm install && npm run build",
+  "outputDirectory": ".next",
+  "devCommand": "npm run dev",
+  "installCommand": "cd .. && npm install",
+  "framework": "nextjs",
+  "regions": ["sfo1"],
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL": "production-supabase-url-here",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "production-supabase-anon-key-here"
+  },
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "development": true,
+      "production": false
+    }
+  }
+}

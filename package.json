@@ -1,0 +1,29 @@
+{
+  "name": "saas-skeleton",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "landing",
+    "app",
+    "supabase",
+    "fly",
+    "cloudflare"
+  ],
+  "scripts": {
+    "bootstrap": "./bootstrap-dev.sh",
+    "bootstrap:prod": "./bootstrap-production.sh",
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "start": "turbo run start",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "test": "turbo run test"
+  },
+  "devDependencies": {
+    "prettier": "^3.0.0",
+    "turbo": "^1.10.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

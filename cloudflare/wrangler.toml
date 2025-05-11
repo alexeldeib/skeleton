@@ -1,0 +1,19 @@
+name = "saas-app-worker"
+main = "src/index.ts"
+compatibility_date = "2023-10-10"
+
+[vars]
+SUPABASE_URL = ""
+SUPABASE_ANON_KEY = ""
+
+# Trigger builds for production when this file changes
+# Add to vars section for production
+
+# [[kv_namespaces]]
+# binding = "KV_CACHE"
+# id = "your-kv-id-here"
+
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "your-database-name"
+# database_id = "your-database-id"
