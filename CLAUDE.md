@@ -5,3 +5,7 @@ avoid executing commands like `npm run dev` without adding an `&` to background 
 when doing headless browser testing, if you can scrape the console, capture the information for any errors.
 
 Never check in secrets. Never git commit hard coded base64-encoded values.
+
+Always test code before committing and pushing.
+
+Always debug and iterate step by step, thinking carefully to achieve your goals.
