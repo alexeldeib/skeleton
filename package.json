@@ -17,9 +17,13 @@
     "start": "turbo run start",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "test": "turbo run test"
+    "test": "turbo run test",
+    "test:e2e": "playwright test",
+    "test:auth": "playwright test tests/magic-link-auth.spec.ts",
+    "test:report": "playwright show-report"
   },
   "devDependencies": {
+    "@playwright/test": "^1.52.0",
     "prettier": "^3.0.0",
     "turbo": "^1.10.0"
   },
