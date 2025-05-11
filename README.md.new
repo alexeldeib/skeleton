@@ -14,6 +14,8 @@ template/
 
 ## Quick Start
 
+### Standard Setup
+
 ```bash
 # Clone repository
 git clone https://github.com/yourusername/saas-template.git
@@ -24,6 +26,54 @@ cd saas-template
 
 # Start development servers
 npm run dev
+```
+
+### Using devenv.sh (Recommended)
+
+For a fully reproducible development environment, we support [devenv.sh](https://devenv.sh):
+
+1. Install devenv.sh:
+   ```bash
+   curl -L https://get.devenv.sh/install.sh | bash
+   ```
+
+2. Install direnv (optional, for automatic activation):
+   ```bash
+   # macOS
+   brew install direnv
+
+   # Linux
+   sudo apt install direnv  # Ubuntu/Debian
+   sudo dnf install direnv  # Fedora
+   ```
+
+3. Clone and enter the repository:
+   ```bash
+   git clone https://github.com/yourusername/saas-template.git
+   cd saas-template
+   ```
+
+4. If using direnv, allow it to load the environment:
+   ```bash
+   direnv allow
+   ```
+
+5. Or manually activate the environment:
+   ```bash
+   devenv shell
+   ```
+
+6. Run the setup script (first time only):
+   ```bash
+   setup
+   ```
+
+7. Start all development servers:
+   ```bash
+   devenv up
+   ```
+
+The devenv.sh environment provides everything needed to develop, test, and deploy the application, including Node.js, TypeScript, PostgreSQL, and Docker.
 ```
 
 ## Prerequisites

@@ -24,29 +24,19 @@ yarn-error.log*
 .env
 .env.*
 !.env.example
-!.env.*.example
 
 # Vercel
 .vercel
 
 # Supabase
 .supabase
-supabase/.branches/
-supabase/.temp/
-supabase/supabase/
-supabase/supabase/.temp/
+supabase/.branches
+supabase/.temp
 
-# Turbo
-.turbo
+# Project config
+.env.production
 
-# Project config and keys
-.project-config
-.env.keys
-.DS_Store
-node_modules
-test-artifacts/
-test-results/
-playwright-report/
-CLAUDE.md
-
-**/.claude/settings.local.json
+# devenv
+.devenv*
+devenv.local.nix
+.direnv
