@@ -39,11 +39,25 @@ echo "You may need to copy the keys manually from the Supabase dashboard if this
 echo "Dashboard URL: https://app.supabase.com/project/$SUPABASE_PROJECT_ID/settings/api"
 echo ""
 
-# For testing purposes, use these placeholder keys
-# In a real scenario, these would be prompted for or passed as parameters
-SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1c3Btdm1ydmxhd2d5d2FvY3ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY5MjUyMTksImV4cCI6MjA2MjUwMTIxOX0.nCb-dw8BeDALnO5NZVYReKMVE6Exs8LJWNFZd5pD4qs"
-SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1c3Btdm1ydmxhd2d5d2FvY3ZkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NjkyNTIxOSwiZXhwIjoyMDYyNTAxMjE5fQ.jiKfZVzYC07uXMBWHsxc-25ALyl7c75J4PFHSMcuAaw"
-echo "Using placeholder API keys for testing"
+# Prompt for keys or read from environment file
+if [ -f ".env.keys" ]; then
+  print_success "Found .env.keys file, reading credentials"
+  source .env.keys
+else
+  print_warning "No .env.keys file found, please provide your Supabase API keys:"
+  echo "Visit: https://app.supabase.com/project/$SUPABASE_PROJECT_ID/settings/api"
+  echo ""
+  read -p "Enter your Supabase anon key: " SUPABASE_ANON_KEY
+  read -p "Enter your Supabase service role key: " SUPABASE_SERVICE_ROLE_KEY
+
+  # Save keys to .env.keys for future use (this file will be gitignored)
+  cat > .env.keys <<EOF
+SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY"
+EOF
+  chmod 600 .env.keys # Restrict permissions to this file
+  print_success "Keys saved to .env.keys - this file is gitignored and only readable by you"
+fi
 
 # Set service key same as service role key for backward compatibility
 SUPABASE_SERVICE_KEY="$SUPABASE_SERVICE_ROLE_KEY"
@@ -70,12 +84,10 @@ PROJECT_NAME="$PROJECT_NAME"
 CREATED_AT="$(date)"
 SUPABASE_PROJECT_ID="$SUPABASE_PROJECT_ID"
 SUPABASE_URL="$SUPABASE_URL"
-SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
-SUPABASE_SERVICE_KEY="$SUPABASE_SERVICE_KEY"
-SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY"
+# API keys are stored in .env.keys for security
 EOF
 
-print_success ".project-config created"
+print_success ".project-config created (ensure this file is gitignored)"
 
 # Create environment files
 echo "Creating component .env files..."
@@ -145,7 +157,8 @@ echo "Anon Key: ${SUPABASE_ANON_KEY:0:10}...${SUPABASE_ANON_KEY: -5}"
 echo "Service Role Key: ${SUPABASE_SERVICE_ROLE_KEY:0:10}...${SUPABASE_SERVICE_ROLE_KEY: -5}"
 echo ""
 echo "Configuration Files:"
-echo "- .project-config"
+echo "- .env.keys (contains your API keys - KEEP THIS SECURE)"
+echo "- .project-config (project info without sensitive keys)"
 echo "- .env (root)"
 echo "- landing/.env.local"
 echo "- app/.env.local"
@@ -153,6 +166,10 @@ echo "- supabase/.env"
 echo "- fly/.env"
 echo "- cloudflare/.env"
 echo ""
-echo "All files are git-ignored and will not be committed to the repository."
+echo -e "${BOLD}${RED}SECURITY WARNING:${RESET}"
+echo -e "- NEVER commit your service role key to version control"
+echo -e "- All .env.* files and .project-config are git-ignored for security"
+echo -e "- The .env.keys file contains sensitive information and should be protected"
+echo -e "- If you believe your keys were exposed, rotate them immediately in the Supabase dashboard"
 
 print_success "Environment setup completed successfully"

@@ -31,16 +31,22 @@ yarn-error.log*
 
 # Supabase
 .supabase
+supabase/.branches/
+supabase/.temp/
+supabase/supabase/
 supabase/supabase/.temp/
 
 # Turbo
 .turbo
 
-# Project config
+# Project config and keys
 .project-config
+.env.keys
 .DS_Store
 node_modules
 test-artifacts/
 test-results/
 playwright-report/
 CLAUDE.md
+
+**/.claude/settings.local.json

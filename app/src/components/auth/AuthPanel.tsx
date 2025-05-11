@@ -16,13 +16,12 @@ export default function AuthPanel() {
       setIsLoading(true)
       setMessage(null)
 
-      // For tests or when Supabase is not available, simulate success
+      // For tests or specific test email addresses, simulate success
       // This allows e2e tests to verify the UI flow even if Supabase is unavailable
       if (process.env.NODE_ENV === 'test' ||
-          email.includes('test@example') ||
-          window.location.hostname === 'localhost') {
+          email.includes('test@example')) {
 
-        console.log('In test/local mode - simulating success response');
+        console.log('In test mode - simulating success response');
 
         // Simulate a delay to mimic API call
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -38,6 +37,37 @@ export default function AuthPanel() {
 
       // In real production environment, make the actual Supabase call
       try {
+        // Debug connection info
+        console.log('================== AUTH DEBUG ==================');
+        console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+        console.log('Anon Key Length:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.length || 'undefined');
+        console.log('Anon Key Prefix:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 10) || 'undefined');
+        console.log('Using email:', email);
+        console.log('Redirect URL:', `${window.location.origin}/auth/callback`);
+
+        // Make a direct API call to test connectivity
+        try {
+          console.log('Testing direct API call...');
+          const testResponse = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/settings`, {
+            method: 'GET',
+            headers: {
+              'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+              'Content-Type': 'application/json'
+            }
+          });
+
+          console.log('Direct API test response:', testResponse.status, testResponse.statusText);
+
+          if (!testResponse.ok) {
+            const errorText = await testResponse.text();
+            console.error('Direct API error details:', errorText);
+          }
+        } catch (directApiError) {
+          console.error('Direct API call failed:', directApiError);
+        }
+
+        // Now try with the Supabase client
+        console.log('Now trying with Supabase client...');
         const { error } = await supabase.auth.signInWithOtp({
           email,
           options: {
@@ -45,7 +75,10 @@ export default function AuthPanel() {
           },
         });
 
+        console.log('Supabase response:', error ? 'Error' : 'Success');
+
         if (error) {
+          console.error('Supabase auth error details:', error);
           throw error;
         }
 

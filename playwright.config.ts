@@ -18,11 +18,11 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://localhost:3001',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
-    
+
     /* Take screenshots on failure */
     screenshot: 'only-on-failure',
   },
@@ -31,7 +31,13 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        // Set a longer timeout for navigation
+        navigationTimeout: 30000,
+        // Always capture a screenshot on failure
+        screenshot: 'only-on-failure',
+      },
     },
   ],
 
@@ -39,17 +45,22 @@ export default defineConfig({
   webServer: [
     {
       command: 'cd app && npm run dev',
-      url: 'http://localhost:3000',
+      url: 'http://localhost:3001',
       reuseExistingServer: !process.env.CI,
       stdout: 'pipe',
       stderr: 'pipe',
-    },
+      timeout: 60000, // 60 seconds
+    }
+    // Note: We're commenting out the Supabase start for now, will run it manually
+    /*
     {
       command: 'cd supabase && npx supabase start',
       url: 'http://localhost:54323/images/storage.png', // Supabase Studio health check
       reuseExistingServer: !process.env.CI,
       stdout: 'pipe',
       stderr: 'pipe',
+      timeout: 120000, // 2 minutes
     }
+    */
   ],
 });
