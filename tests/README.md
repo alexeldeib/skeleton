@@ -1,12 +1,13 @@
-# End-to-End Tests
+# Authentication Testing Suite
 
-This directory contains end-to-end tests for the SaaS application using Playwright.
+This directory contains comprehensive end-to-end tests for the SaaS application using Playwright, with special focus on the authentication system.
 
 ## Prerequisites
 
 - Node.js and npm
 - Supabase CLI installed
 - All dependencies installed (`npm install` at the root)
+- Playwright browsers installed (`npx playwright install`)
 
 ## Setup
 
@@ -34,8 +35,14 @@ npx playwright test tests/magic-link-auth.spec.ts
 # Run with UI
 npx playwright test --ui
 
+# Run with headed browsers (visible browser windows)
+npx playwright test --headed
+
 # Run in debug mode
 npx playwright test --debug
+
+# View test report after running tests
+npx playwright show-report
 ```
 
 ## Test Descriptions
@@ -76,6 +83,23 @@ This test verifies the form works against production Supabase (without following
 2. Submits a magic link request to a controlled test email
 3. Verifies the confirmation message appears
 4. Confirms network requests are sent to production Supabase
+
+#### 4. Error Cases Test (`auth-error-cases.spec.ts`)
+
+This test suite verifies proper handling of various error scenarios:
+
+1. Tests validation for invalid email formats
+2. Tests validation for empty email submission
+3. Tests handling of invalid magic link tokens
+4. Tests handling of network errors during authentication
+
+#### 5. Authentication Integration Test (`auth-integration.spec.ts`)
+
+This test provides comprehensive integration testing with a local Supabase:
+
+1. Tests the complete magic link flow with a real Supabase instance
+2. Verifies correct handling of rate limiting and other errors
+3. Uses the real mailbox to extract and verify magic links
 
 ### Email Testing Approaches
 
@@ -122,6 +146,20 @@ Test runs generate various artifacts that are saved for debugging and verificati
 - **Debug Data**: HTML and JS files used during development and debugging
   - `test-artifacts/debug-data/`
 
+## Helper Utilities
+
+The `helpers` directory contains utility functions for testing:
+
+- `mailbox.ts` - Functions to interact with Supabase's local inbucket email service
+- `mock-email-helper.js` - Functions to manage the mock email server
+- `auth-test-helper.ts` - Common authentication testing functions including:
+  - `fillLoginForm()` - Fill the login form with an email
+  - `submitLoginForm()` - Submit the login form
+  - `checkForMessage()` - Look for specific messages on the page
+  - `checkForError()` - Look for specific error messages
+  - `takeScreenshot()` - Take labeled screenshots for documentation
+  - `isAuthenticated()` - Check if the user is authenticated
+
 ## Debugging Tests
 
 If tests fail, you can:
@@ -131,6 +169,7 @@ If tests fail, you can:
 3. Examine the HTML files saved in `test-artifacts/debug-data`
 4. Run with debug mode: `npx playwright test --debug`
 5. Check the Supabase local development server logs
+6. View the full HTML report: `npx playwright show-report`
 
 ### Common Issues
 
@@ -138,6 +177,17 @@ If tests fail, you can:
 - **Environment Variable Issues**: Ensure Supabase URL and key are properly set
 - **Network Errors**: Check if Supabase is running on port 54321
 - **Form Submission Errors**: Check browser console for any API call failures
+- **Mock Email Server Failures**: Check if port 54324 is available
+
+## Extending the Tests
+
+When adding new tests, follow these guidelines:
+
+1. Put common utilities in helper files in the `helpers` directory
+2. Follow the existing patterns for test organization
+3. Use the auth-test-helper functions for common operations
+4. Take screenshots at key points for documentation
+5. Add proper error handling and detailed logs
 
 ## Notes for CI/CD
 
@@ -146,3 +196,5 @@ When running in CI/CD environments, set the CI environment variable to ensure pr
 ```bash
 CI=true npx playwright test
 ```
+
+For CI environments, the mock tests (`magic-link-auth.spec.ts` and `auth-error-cases.spec.ts`) are preferred as they don't require a running Supabase instance.
