@@ -50,9 +50,15 @@
       # Stop processes that might conflict with tests
       pkill -f "npm run dev" || true
       sleep 1
-      # Run tests
+      # Run tests with explicit output
       chmod +x tests/run-tests.sh
-      ./tests/run-tests.sh
+      echo "===================================================================="
+      echo "RUNNING TESTS"
+      echo "===================================================================="
+      bash -x ./tests/run-tests.sh
+      echo "===================================================================="
+      echo "TESTS COMPLETED"
+      echo "===================================================================="
     '';
 
     # Run only auth tests
