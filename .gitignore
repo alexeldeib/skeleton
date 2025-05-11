@@ -35,6 +35,8 @@ supabase/.temp
 
 # Project config
 .env.production
+project-config
+project-config/**
 
 # devenv
 .devenv*
