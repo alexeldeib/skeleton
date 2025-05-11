@@ -1,0 +1,91 @@
+# SaaS Template
+
+Production-ready SaaS template with landing page, app frontend, and backend components.
+
+## Structure
+
+```
+template/
+├── landing/       # Marketing site (Next.js)
+├── app/           # Application (Next.js)
+├── supabase/      # Database, auth, edge functions
+└── backend/       # Backend services (optional)
+```
+
+## Quick Start
+
+```bash
+# Clone repository
+git clone https://github.com/yourusername/saas-template.git
+cd saas-template
+
+# Setup development environment
+./setup.sh
+
+# Start development servers
+npm run dev
+```
+
+## Prerequisites
+
+- Node.js 18+
+- npm
+- Git
+- Docker (for local Supabase)
+- Supabase CLI (`npm i -g supabase`)
+
+## Features
+
+- **Landing Page**: Modern marketing site with signup form
+- **Application**: Protected dashboard with auth
+- **Authentication**: Email magic link, Google, GitHub via Supabase
+- **Database**: PostgreSQL with migrations
+- **Edge Functions**: Serverless API endpoints
+
+## Development
+
+```bash
+# Start all services
+npm run dev
+
+# Start specific component
+cd landing && npm run dev # http://localhost:3000
+cd app && npm run dev     # http://localhost:3001
+
+# Local Supabase
+cd supabase && supabase start
+cd supabase && supabase stop
+```
+
+## Testing
+
+```bash
+# Run authentication tests
+./run-auth-tests.sh
+
+# Individual component tests
+cd app && npm test
+```
+
+## Deployment
+
+1. Authenticate with all services:
+   ```bash
+   supabase login
+   vercel login
+   ```
+
+2. Run production setup:
+   ```bash
+   ./setup.sh --prod
+   ```
+
+## Documentation
+
+- [Auth System](./docs/auth.md)
+- [Database Schema](./docs/schema.md)
+- [Deployment](./docs/deployment.md)
+
+## License
+
+MIT
