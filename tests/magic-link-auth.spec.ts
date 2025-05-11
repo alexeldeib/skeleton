@@ -65,7 +65,7 @@ test('Complete magic link authentication flow', async ({ page, context }) => {
     document.querySelectorAll('.animate-spin').forEach(el => el.classList.remove('animate-spin'));
   });
   await page.screenshot({
-    path: './test-artifacts/screenshots/login-page.png',
+    path: './test-artifacts/screenshots/mock/login-page.png',
     fullPage: true
   });
 
@@ -85,7 +85,7 @@ test('Complete magic link authentication flow', async ({ page, context }) => {
   
   // Take screenshot of filled form
   await page.screenshot({
-    path: './test-artifacts/screenshots/filled-form.png',
+    path: './test-artifacts/screenshots/mock/filled-form.png',
     fullPage: true
   });
   
@@ -109,7 +109,7 @@ test('Complete magic link authentication flow', async ({ page, context }) => {
   // Take screenshot of confirmation page
   console.log('📸 Taking screenshot of confirmation page...');
   await page.screenshot({
-    path: './test-artifacts/screenshots/confirmation-page.png',
+    path: './test-artifacts/screenshots/mock/confirmation-page.png',
     fullPage: true
   });
 
@@ -124,7 +124,7 @@ test('Complete magic link authentication flow', async ({ page, context }) => {
   
   // Take screenshot showing successful email request
   await page.screenshot({
-    path: './test-artifacts/screenshots/email-requested.png',
+    path: './test-artifacts/screenshots/mock/email-requested.png',
     fullPage: true
   });
   
@@ -147,9 +147,9 @@ test('Complete magic link authentication flow', async ({ page, context }) => {
     
     // Take screenshot of authenticated page
     console.log('📸 Taking screenshot of authenticated state...');
-    await authPage.screenshot({ 
-      path: './test-artifacts/screenshots/authenticated-page.png',
-      fullPage: true 
+    await authPage.screenshot({
+      path: './test-artifacts/screenshots/mock/authenticated-page.png',
+      fullPage: true
     });
     
     console.log('🎉 Full magic link authentication flow passed!');
@@ -158,9 +158,9 @@ test('Complete magic link authentication flow', async ({ page, context }) => {
     
     // Take final state screenshot for debugging
     console.log('📸 Taking screenshot of final state...');
-    await authPage.screenshot({ 
-      path: './test-artifacts/screenshots/auth-result-page.png',
-      fullPage: true 
+    await authPage.screenshot({
+      path: './test-artifacts/screenshots/mock/auth-result-page.png',
+      fullPage: true
     });
     
     // Check if there's visible content on the page
