@@ -48,6 +48,8 @@
 
     test.exec = ''
       chmod +x tests/run-tests.sh
+      # First terminate any existing app processes to avoid port conflicts
+      lsof -i :3001 -t | xargs kill -9 2>/dev/null || true
       ./tests/run-tests.sh
     '';
 
@@ -88,10 +90,29 @@
   };
 
   # Processes for development
+  # Processes for development (not used in testing)
   processes = {
-    app.exec = "cd app && npm run dev";
-    landing.exec = "cd landing && npm run dev";
-    supabase.exec = "cd supabase && npx supabase start";
+    app = {
+      exec = "cd app && npm run dev";
+      # Don't start this process when running tests
+      when = {
+        command_not = ["^devenv test.*"];
+      };
+    };
+    landing = {
+      exec = "cd landing && npm run dev";
+      # Don't start this process when running tests
+      when = {
+        command_not = ["^devenv test.*"];
+      };
+    };
+    supabase = {
+      exec = "cd supabase && npx supabase start";
+      # Allow this to run during tests since it doesn't conflict
+      when = {
+        always = true;
+      };
+    };
   };
 
   # Entry message when entering shell

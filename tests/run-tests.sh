@@ -15,14 +15,21 @@ cd "$(dirname "$0")/.."
 # Create directories for test artifacts
 mkdir -p test-artifacts/screenshots
 
-# Start app servers in a simpler way
-echo -e "${YELLOW}Starting app and landing page...${RESET}"
+# Start app servers if not already running
+echo -e "${YELLOW}Checking for app server...${RESET}"
 
-# Start the app server directly
-cd app
-npm run dev > /dev/null 2>&1 &
-APP_PID=$!
-cd ..
+# Check if app is already running
+if curl -s http://localhost:3001 > /dev/null; then
+  echo -e "${GREEN}App already running on http://localhost:3001${RESET}"
+  APP_PID=""
+else
+  echo -e "${YELLOW}Starting app server...${RESET}"
+  # Start the app server directly
+  cd app
+  npm run dev > /dev/null 2>&1 &
+  APP_PID=$!
+  cd ..
+fi
 
 # Check if the app is running
 MAX_RETRIES=15
@@ -52,10 +59,12 @@ npx playwright test tests/auth.test.js
 echo -e "${GREEN}Running API tests...${RESET}"
 npx playwright test tests/api.test.js
 
-# Stop the app server
+# Stop the app server only if we started it
 if [[ -n "$APP_PID" ]]; then
-  echo -e "${YELLOW}Stopping app...${RESET}"
+  echo -e "${YELLOW}Stopping app server we started...${RESET}"
   kill $APP_PID 2>/dev/null || true
+else
+  echo -e "${YELLOW}Leaving existing app server running...${RESET}"
 fi
 
 echo -e "${GREEN}All tests completed!${RESET}"
