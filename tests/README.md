@@ -42,7 +42,11 @@ npx playwright test --debug
 
 ### Magic Link Authentication
 
-The `magic-link-auth.spec.ts` test verifies the complete magic link authentication flow:
+We have multiple test variants for magic link authentication to handle different testing scenarios:
+
+#### 1. Mock Email Server Test (`magic-link-auth.spec.ts`)
+
+This test uses a mock email server to simulate the complete authentication flow:
 
 1. Navigates to the login page
 2. Verifies the form is visible and interactive
@@ -53,9 +57,29 @@ The `magic-link-auth.spec.ts` test verifies the complete magic link authenticati
 7. Follows the magic link to complete authentication
 8. Verifies successful redirection to the dashboard
 
-#### Email Testing Implementations
+#### 2. Local Supabase Test (`auth-local-complete.spec.ts`)
 
-The test supports two modes of email testing:
+This test uses a running local Supabase instance with inbucket email service:
+
+1. Navigates to the login page
+2. Sends a magic link request to a test email
+3. Checks the local Supabase inbucket for the actual email
+4. Extracts the real magic link from the email
+5. Follows the link to complete authentication
+6. Verifies successful redirection to dashboard
+
+#### 3. Production Validation Test (`auth-prod-check.spec.ts`)
+
+This test verifies the form works against production Supabase (without following links):
+
+1. Navigates to the login page with production credentials
+2. Submits a magic link request to a controlled test email
+3. Verifies the confirmation message appears
+4. Confirms network requests are sent to production Supabase
+
+### Email Testing Approaches
+
+We use multiple approaches for handling emails in tests:
 
 1. **Application Test Mode**
    - Any email address containing `test@example` will trigger a test mode in the auth component
@@ -63,15 +87,25 @@ The test supports two modes of email testing:
    - This allows testing of the UI flow without actual email delivery
 
 2. **Mock Email Server**
-   - The test uses a custom mock email server (`tests/mock-email-server.js`)
-   - This server simulates the Supabase inbucket email service on port 54324
-   - It generates magic links and tracks emails sent during testing
+   - Used in `magic-link-auth.spec.ts`
+   - A custom mock email server (`tests/mock-email-server.js`) simulates the Supabase inbucket
+   - It generates magic links and tracks emails during testing
    - This allows complete end-to-end testing without requiring a running Supabase instance
+   - Ideal for CI/CD environments or when Supabase isn't available
 
-3. **Real Supabase Email Testing**
-   - For real email testing with Supabase inbucket, use the `helpers/mailbox.ts` module
-   - This requires a running Supabase instance with inbucket configured
-   - This option is useful for production-like testing environments
+3. **Local Supabase Inbucket**
+   - Used in `auth-local-complete.spec.ts`
+   - Accesses real emails from the local Supabase inbucket service
+   - Uses the `helpers/mailbox.ts` module to fetch emails from inbucket
+   - Provides the most realistic testing of the complete flow
+   - Requires a running local Supabase instance (`supabase start`)
+
+4. **Production Validation**
+   - Used in `auth-prod-check.spec.ts`
+   - Makes actual API calls to production Supabase
+   - Validates form submission and confirmation message
+   - Doesn't attempt to access actual emails or follow magic links
+   - Useful for validating production configuration
 
 ## Test Artifacts
 

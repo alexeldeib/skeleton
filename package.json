@@ -20,10 +20,15 @@
     "test": "turbo run test",
     "test:e2e": "playwright test",
     "test:auth": "playwright test tests/magic-link-auth.spec.ts",
+    "test:auth:all": "playwright test tests/auth-*.spec.ts tests/magic-link-auth.spec.ts",
+    "test:auth:local": "playwright test tests/auth-local-complete.spec.ts",
+    "test:auth:prod": "playwright test tests/auth-prod-check.spec.ts",
+    "test:auth:mock": "playwright test tests/magic-link-auth.spec.ts",
     "test:report": "playwright show-report"
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",
+    "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "prettier": "^3.0.0",
     "puppeteer": "^24.8.2",
@@ -34,7 +39,6 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.49.4",
-    "dotenv": "^16.5.0"
+    "@supabase/supabase-js": "^2.49.4"
   }
 }
