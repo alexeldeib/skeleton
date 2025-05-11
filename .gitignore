@@ -30,6 +30,7 @@ yarn-error.log*
 
 # Supabase
 .supabase
+supabase/supabase/.temp/
 
 # Turbo
 .turbo

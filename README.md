@@ -38,8 +38,15 @@ npm run bootstrap
 # or
 ./bootstrap-dev.sh
 
-# Start development servers
-npm run dev
+# Start Supabase locally (if needed)
+cd supabase && supabase start && cd ..
+
+# Start frontend development servers in separate terminals:
+# Terminal 1 - Landing page (http://localhost:3000)
+cd landing && npm run dev
+
+# Terminal 2 - App frontend (http://localhost:3001)
+cd app && npm run dev
 ```
 
 This will:
@@ -48,6 +55,8 @@ This will:
 3. Install dependencies
 4. Start a local Supabase instance
 5. Initialize Git repository
+6. Start the landing page on http://localhost:3000
+7. Start the application on http://localhost:3001
 
 ### Production Deployment
 
@@ -81,14 +90,20 @@ This will:
 Once set up, you can use these commands:
 
 ```bash
-# Start all development servers
-npm run dev
+# Start the landing page server
+cd landing && npm run dev
+
+# Start the app server 
+cd app && npm run dev
+
+# Start Supabase locally
+cd supabase && supabase start
+
+# Stop Supabase
+cd supabase && supabase stop
 
 # Build all packages
 npm run build
-
-# Start production servers
-npm run start
 
 # Run linting
 npm run lint

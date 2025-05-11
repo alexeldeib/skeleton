@@ -40,18 +40,32 @@ prompt_input() {
   local var_name="$2"
   local default="$3"
   local is_secret="$4"
-  
+
+  # If we're in auto mode and it's a y/n question, use AUTO_CONTINUE
+  if [[ -n "$AUTO_CONTINUE" && "$prompt" == *"(y/n)"* ]]; then
+    echo "$prompt: $AUTO_CONTINUE (auto)"
+    eval "$var_name=\"$AUTO_CONTINUE\""
+    return
+  fi
+
+  # If we're in auto mode and there's a default, use default
+  if [[ -n "$AUTO_CONTINUE" && -n "$default" ]]; then
+    echo "$prompt (default: $default): Using default (auto)"
+    eval "$var_name=\"$default\""
+    return
+  fi
+
   if [ -n "$default" ]; then
     prompt="$prompt (default: $default)"
   fi
-  
+
   if [ "$is_secret" = "true" ]; then
     read -sp "$prompt: " input
     echo ""
   else
     read -p "$prompt: " input
   fi
-  
+
   if [ -z "$input" ] && [ -n "$default" ]; then
     eval "$var_name=\"$default\""
   else
@@ -174,30 +188,135 @@ create_supabase_project() {
   else
     echo "Creating new Supabase project: $PROJECT_NAME"
     
-    # Create new Supabase project (organization ID is optional)
-    if [ -n "$SUPABASE_ORG_ID" ]; then
-      SUPABASE_OUTPUT=$(supabase projects create "$PROJECT_NAME" --org-id "$SUPABASE_ORG_ID" --json)
-    else
-      SUPABASE_OUTPUT=$(supabase projects create "$PROJECT_NAME" --json)
+    # Generate a random password for the Supabase database
+    DB_PASSWORD=$(openssl rand -base64 16)
+
+    # Prompt for organization ID if not already set
+    if [ -z "$SUPABASE_ORG_ID" ]; then
+      # List available organizations
+      echo "Available Supabase organizations:"
+      supabase orgs list
+
+      if [ -n "$AUTO_CONTINUE" ]; then
+        # Try to extract first org ID automatically
+        ORG_LIST=$(supabase orgs list)
+        if [[ $ORG_LIST =~ ([a-zA-Z0-9_-]+)[[:space:]]+\|[[:space:]]+[[:alnum:][:space:]\']+$ ]]; then
+          SUPABASE_ORG_ID="${BASH_REMATCH[1]}"
+          echo "Auto-selected organization ID: $SUPABASE_ORG_ID"
+        else
+          print_error "Could not auto-select an organization ID"
+          exit 1
+        fi
+      else
+        prompt_input "Enter your Supabase organization ID" SUPABASE_ORG_ID
+      fi
     fi
-    
-    # Extract project ID from the output
-    SUPABASE_PROJECT_ID=$(echo "$SUPABASE_OUTPUT" | jq -r '.id')
+
+    # Create new Supabase project with required parameters
+    echo "Creating Supabase project with org-id=$SUPABASE_ORG_ID, region=us-east-1"
+    SUPABASE_OUTPUT=$(supabase projects create "$PROJECT_NAME" --org-id "$SUPABASE_ORG_ID" --db-password "$DB_PASSWORD" --region "us-east-1")
+
+    # Extract project ID from the output using regex
+    if [[ $SUPABASE_OUTPUT =~ Created\ project:\ ([a-zA-Z0-9-]+) ]]; then
+      SUPABASE_PROJECT_ID="${BASH_REMATCH[1]}"
+    else
+      print_error "Failed to extract project ID from output"
+      print_error "Output: $SUPABASE_OUTPUT"
+      exit 1
+    fi
     
     print_success "Supabase project created with ID: $SUPABASE_PROJECT_ID"
   fi
   
   # Get the project API keys
   echo "Fetching Supabase API keys..."
-  SUPABASE_API_KEYS=$(supabase projects api-keys --project-ref "$SUPABASE_PROJECT_ID" --json)
-  
-  # Extract the anon key and service key
-  SUPABASE_ANON_KEY=$(echo "$SUPABASE_API_KEYS" | jq -r '.[] | select(.name == "anon key") | .api_key')
-  SUPABASE_SERVICE_KEY=$(echo "$SUPABASE_API_KEYS" | jq -r '.[] | select(.name == "service_role key") | .api_key')
-  
+
+  # Try up to 3 times to fetch the API keys
+  local retry_count=0
+  local max_retries=3
+  local success=false
+
+  while [ $retry_count -lt $max_retries ] && [ "$success" = false ]; do
+    SUPABASE_API_KEYS=$(supabase projects api-keys --project-ref "$SUPABASE_PROJECT_ID" 2>/tmp/supabase_error.log)
+
+    if [ -z "$SUPABASE_API_KEYS" ]; then
+      retry_count=$((retry_count + 1))
+      print_warning "Attempt $retry_count to fetch Supabase API keys failed. Retrying in 5 seconds..."
+
+      if [ -f /tmp/supabase_error.log ]; then
+        print_warning "Error: $(cat /tmp/supabase_error.log)"
+      fi
+
+      if [ $retry_count -lt $max_retries ]; then
+        sleep 5
+      fi
+    else
+      success=true
+    fi
+  done
+
+  if [ "$success" = false ]; then
+    print_error "Failed to fetch Supabase API keys after $max_retries attempts."
+    print_error "Please check your authentication, network connection, and try again."
+    print_error "You may need to manually add the following keys to your .project-config file:"
+    print_error "SUPABASE_ANON_KEY=\"your_anon_key\""
+    print_error "SUPABASE_SERVICE_KEY=\"your_service_key\""
+    print_error "SUPABASE_SERVICE_ROLE_KEY=\"your_service_key\""
+
+    # Prompt user to continue or abort
+    prompt_input "Do you want to continue without Supabase API keys? (y/n)" continue_without_keys
+    if [ "$continue_without_keys" != "y" ] && [ "$continue_without_keys" != "Y" ]; then
+      exit 1
+    fi
+
+    # Set placeholder values if the user chooses to continue
+    SUPABASE_ANON_KEY="MISSING_KEY_PLEASE_REPLACE"
+    SUPABASE_SERVICE_ROLE_KEY="MISSING_KEY_PLEASE_REPLACE"
+    SUPABASE_SERVICE_KEY="$SUPABASE_SERVICE_ROLE_KEY"
+
+    print_warning "Continuing with placeholder API keys. You MUST update these manually later!"
+  else
+    # Extract keys from text output using regex
+    if [[ $SUPABASE_API_KEYS =~ anon[[:space:]]+public[[:space:]]+([a-zA-Z0-9.=_-]+) ]]; then
+      SUPABASE_ANON_KEY="${BASH_REMATCH[1]}"
+    else
+      SUPABASE_ANON_KEY=""
+    fi
+
+    if [[ $SUPABASE_API_KEYS =~ service_role[[:space:]]+secret[[:space:]]+([a-zA-Z0-9.=_-]+) ]]; then
+      SUPABASE_SERVICE_ROLE_KEY="${BASH_REMATCH[1]}"
+    else
+      SUPABASE_SERVICE_ROLE_KEY=""
+    fi
+
+    # Alias service_role key as SUPABASE_SERVICE_KEY for backward compatibility
+    SUPABASE_SERVICE_KEY="$SUPABASE_SERVICE_ROLE_KEY"
+
+    # Validate that we received valid keys
+    if [ -z "$SUPABASE_ANON_KEY" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+      print_error "Failed to extract Supabase API keys. The response format may have changed."
+      print_error "API Keys Response: $SUPABASE_API_KEYS"
+
+      # Prompt user to continue or abort
+      prompt_input "Do you want to continue without Supabase API keys? (y/n)" continue_without_keys
+      if [ "$continue_without_keys" != "y" ] && [ "$continue_without_keys" != "Y" ]; then
+        exit 1
+      fi
+
+      # Set placeholder values if the user chooses to continue
+      SUPABASE_ANON_KEY="MISSING_KEY_PLEASE_REPLACE"
+      SUPABASE_SERVICE_ROLE_KEY="MISSING_KEY_PLEASE_REPLACE"
+      SUPABASE_SERVICE_KEY="$SUPABASE_SERVICE_ROLE_KEY"
+
+      print_warning "Continuing with placeholder API keys. You MUST update these manually later!"
+    else
+      print_success "Successfully retrieved Supabase API keys"
+    fi
+  fi
+
   # Get the project URL
   SUPABASE_URL="https://$SUPABASE_PROJECT_ID.supabase.co"
-  
+
   print_success "Supabase keys retrieved successfully"
   
   # Update project config with Supabase details
@@ -206,6 +325,9 @@ SUPABASE_PROJECT_ID="$SUPABASE_PROJECT_ID"
 SUPABASE_URL="$SUPABASE_URL"
 SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
 SUPABASE_SERVICE_KEY="$SUPABASE_SERVICE_KEY"
+SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY"
+SUPABASE_DB_PASSWORD="$DB_PASSWORD"
+SUPABASE_ORG_ID="$SUPABASE_ORG_ID"
 EOF
 
   print_success "Supabase configuration completed"
@@ -231,10 +353,35 @@ create_fly_app() {
   
   # Set secrets for the app
   echo "Setting Fly.io app secrets..."
-  (cd fly && flyctl secrets set \
+
+  # Check if we have valid Supabase keys
+  if [[ "$SUPABASE_URL" == "MISSING"* ]] || [[ "$SUPABASE_SERVICE_KEY" == "MISSING"* ]]; then
+    print_warning "Using placeholder Supabase keys for Fly.io. This deployment will likely not work correctly."
+    print_warning "You'll need to manually update the Fly.io secrets later with correct keys."
+  fi
+
+  # Try to set the secrets, but don't fail if it doesn't work
+  if ! (cd fly && flyctl secrets set \
     SUPABASE_URL="$SUPABASE_URL" \
     SUPABASE_SERVICE_KEY="$SUPABASE_SERVICE_KEY" \
-    --app "$FLY_APP_NAME")
+    SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY" \
+    PORT="8080" \
+    --app "$FLY_APP_NAME" 2>/tmp/fly_error.log); then
+
+    print_error "Failed to set Fly.io secrets."
+    if [ -f /tmp/fly_error.log ]; then
+      print_error "Error: $(cat /tmp/fly_error.log)"
+    fi
+
+    prompt_input "Do you want to continue despite Fly.io secret setting failure? (y/n)" continue_without_fly_secrets
+    if [ "$continue_without_fly_secrets" != "y" ] && [ "$continue_without_fly_secrets" != "Y" ]; then
+      exit 1
+    fi
+
+    print_warning "Continuing without setting Fly.io secrets. You'll need to set them manually later."
+  else
+    print_success "Fly.io secrets set successfully"
+  fi
   
   # Get the app details
   FLY_APP_URL="https://$FLY_APP_NAME.fly.dev"
@@ -271,10 +418,31 @@ create_cloudflare_worker() {
 SUPABASE_URL = "$SUPABASE_URL"
 SUPABASE_ANON_KEY = "$SUPABASE_ANON_KEY"
 EOF
-  
+
+  # Check if we have valid Supabase keys
+  if [[ "$SUPABASE_URL" == "MISSING"* ]] || [[ "$SUPABASE_ANON_KEY" == "MISSING"* ]]; then
+    print_warning "Using placeholder Supabase keys for Cloudflare Worker. This deployment will likely not work correctly."
+    print_warning "You'll need to manually update the Cloudflare Worker environment variables later with correct keys."
+  fi
+
   # Deploy the worker
   echo "Deploying Cloudflare Worker..."
-  (cd cloudflare && wrangler deploy)
+  if ! (cd cloudflare && wrangler deploy 2>/tmp/cf_error.log); then
+    print_error "Failed to deploy Cloudflare Worker."
+    if [ -f /tmp/cf_error.log ]; then
+      print_error "Error: $(cat /tmp/cf_error.log)"
+    fi
+
+    prompt_input "Do you want to continue despite Cloudflare Worker deployment failure? (y/n)" continue_without_cf
+    if [ "$continue_without_cf" != "y" ] && [ "$continue_without_cf" != "Y" ]; then
+      exit 1
+    fi
+
+    print_warning "Continuing without deploying Cloudflare Worker. You'll need to deploy it manually later."
+    CLOUDFLARE_WORKER_URL="NOT_DEPLOYED"
+  else
+    print_success "Cloudflare Worker deployed successfully"
+  fi
   
   # Get the worker URL
   CLOUDFLARE_WORKER_URL="https://$CLOUDFLARE_WORKER_NAME.workers.dev"
@@ -300,21 +468,65 @@ create_vercel_projects() {
   # Create the project
   (cd landing && vercel link --yes --project "$LANDING_PROJECT_NAME")
   
-  # Add environment variables
-  (cd landing && vercel env add NEXT_PUBLIC_SUPABASE_URL production "$SUPABASE_URL")
-  (cd landing && vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production "$SUPABASE_ANON_KEY")
-  
+  # Check if we have valid Supabase keys
+  if [[ "$SUPABASE_URL" == "MISSING"* ]] || [[ "$SUPABASE_ANON_KEY" == "MISSING"* ]]; then
+    print_warning "Using placeholder Supabase keys for Vercel. This deployment will likely not work correctly."
+    print_warning "You'll need to manually update the Vercel environment variables later with correct keys."
+  fi
+
+  # Add environment variables - don't fail the script if these don't work
+  if ! (cd landing && vercel env add NEXT_PUBLIC_SUPABASE_URL production "$SUPABASE_URL" 2>/tmp/vercel_error.log); then
+    print_error "Failed to set NEXT_PUBLIC_SUPABASE_URL for landing page."
+    if [ -f /tmp/vercel_error.log ]; then
+      print_error "Error: $(cat /tmp/vercel_error.log)"
+    fi
+    print_warning "You'll need to set this manually later."
+  fi
+
+  if ! (cd landing && vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production "$SUPABASE_ANON_KEY" 2>/tmp/vercel_error.log); then
+    print_error "Failed to set NEXT_PUBLIC_SUPABASE_ANON_KEY for landing page."
+    if [ -f /tmp/vercel_error.log ]; then
+      print_error "Error: $(cat /tmp/vercel_error.log)"
+    fi
+    print_warning "You'll need to set this manually later."
+  fi
+
   # Create app project
   APP_PROJECT_NAME="$PROJECT_NAME-app"
-  
+
   echo "Creating Vercel project for application: $APP_PROJECT_NAME"
-  
+
   # Create the project
-  (cd app && vercel link --yes --project "$APP_PROJECT_NAME")
-  
-  # Add environment variables
-  (cd app && vercel env add NEXT_PUBLIC_SUPABASE_URL production "$SUPABASE_URL")
-  (cd app && vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production "$SUPABASE_ANON_KEY")
+  if ! (cd app && vercel link --yes --project "$APP_PROJECT_NAME" 2>/tmp/vercel_error.log); then
+    print_error "Failed to link app project to Vercel."
+    if [ -f /tmp/vercel_error.log ]; then
+      print_error "Error: $(cat /tmp/vercel_error.log)"
+    fi
+
+    prompt_input "Do you want to continue despite Vercel app linking failure? (y/n)" continue_without_vercel_app
+    if [ "$continue_without_vercel_app" != "y" ] && [ "$continue_without_vercel_app" != "Y" ]; then
+      exit 1
+    fi
+
+    print_warning "Continuing without linking app to Vercel. You'll need to set it up manually later."
+  else
+    # Add environment variables - don't fail if these don't work
+    if ! (cd app && vercel env add NEXT_PUBLIC_SUPABASE_URL production "$SUPABASE_URL" 2>/tmp/vercel_error.log); then
+      print_error "Failed to set NEXT_PUBLIC_SUPABASE_URL for app."
+      if [ -f /tmp/vercel_error.log ]; then
+        print_error "Error: $(cat /tmp/vercel_error.log)"
+      fi
+      print_warning "You'll need to set this manually later."
+    fi
+
+    if ! (cd app && vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production "$SUPABASE_ANON_KEY" 2>/tmp/vercel_error.log); then
+      print_error "Failed to set NEXT_PUBLIC_SUPABASE_ANON_KEY for app."
+      if [ -f /tmp/vercel_error.log ]; then
+        print_error "Error: $(cat /tmp/vercel_error.log)"
+      fi
+      print_warning "You'll need to set this manually later."
+    fi
+  fi
   
   # Get Vercel project URLs
   LANDING_URL="https://$LANDING_PROJECT_NAME.vercel.app"
@@ -415,14 +627,18 @@ EOF
 SUPABASE_URL=$SUPABASE_URL
 SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
 SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY
+SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
 SUPABASE_PROJECT_ID=$SUPABASE_PROJECT_ID
+SUPABASE_DB_PASSWORD=$DB_PASSWORD
 EOF
   
   # Fly.io
   cat > fly/.env <<EOF
 SUPABASE_URL=$SUPABASE_URL
 SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY
+SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
 FLY_APP_NAME=$FLY_APP_NAME
+PORT=8080
 EOF
   
   # Cloudflare Worker
@@ -479,32 +695,112 @@ display_summary() {
   print_success "Production deployment completed successfully!"
 }
 
+# Test function to only run specific parts of the script
+test_env_extraction() {
+  echo -e "${BOLD}${BLUE}🚀 Testing Environment Variable Extraction 🚀${RESET}"
+
+  # Set test variables
+  PROJECT_NAME="saas-test-project"
+  SUPABASE_PROJECT_ID="test-project-id"
+  SUPABASE_URL="https://test-project-id.supabase.co"
+  SUPABASE_ANON_KEY="test-anon-key"
+  SUPABASE_SERVICE_KEY="test-service-key"
+  SUPABASE_SERVICE_ROLE_KEY="test-service-role-key"
+  FLY_APP_NAME="$PROJECT_NAME-backend"
+  FLY_APP_URL="https://$FLY_APP_NAME.fly.dev"
+  CLOUDFLARE_WORKER_NAME="$PROJECT_NAME-worker"
+  CLOUDFLARE_WORKER_URL="https://$CLOUDFLARE_WORKER_NAME.workers.dev"
+  LANDING_PROJECT_NAME="$PROJECT_NAME-landing"
+  LANDING_URL="https://$LANDING_PROJECT_NAME.vercel.app"
+  APP_PROJECT_NAME="$PROJECT_NAME-app"
+  APP_URL="https://$APP_PROJECT_NAME.vercel.app"
+
+  # Create project config file
+  echo "Creating test .project-config file..."
+  cat > .project-config <<EOF
+PROJECT_NAME="$PROJECT_NAME"
+CREATED_AT="$(date)"
+SUPABASE_PROJECT_ID="$SUPABASE_PROJECT_ID"
+SUPABASE_URL="$SUPABASE_URL"
+SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+SUPABASE_SERVICE_KEY="$SUPABASE_SERVICE_KEY"
+SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY"
+FLY_APP_NAME="$FLY_APP_NAME"
+FLY_APP_URL="$FLY_APP_URL"
+CLOUDFLARE_WORKER_NAME="$CLOUDFLARE_WORKER_NAME"
+CLOUDFLARE_WORKER_URL="$CLOUDFLARE_WORKER_URL"
+LANDING_PROJECT_NAME="$LANDING_PROJECT_NAME"
+LANDING_URL="$LANDING_URL"
+APP_PROJECT_NAME="$APP_PROJECT_NAME"
+APP_URL="$APP_URL"
+EOF
+
+  # Create .env files
+  update_local_env_files
+
+  # Display created files
+  echo -e "\nCreated .env files:"
+  echo "---------------"
+  echo "landing/.env.local:"
+  cat landing/.env.local
+  echo "---------------"
+  echo "app/.env.local:"
+  cat app/.env.local
+  echo "---------------"
+  echo "supabase/.env:"
+  cat supabase/.env
+  echo "---------------"
+  echo "fly/.env:"
+  cat fly/.env
+  echo "---------------"
+  echo "cloudflare/.env:"
+  cat cloudflare/.env
+  echo "---------------"
+
+  print_success "Environment variable extraction test completed"
+}
+
 # Main function
 main() {
   echo -e "${BOLD}${BLUE}🚀 SaaS Application Production Bootstrapper 🚀${RESET}"
   echo -e "This script will create and deploy all components of your SaaS application to production environments.\n"
-  
+
   # Check prerequisites before proceeding
   check_prerequisites
-  
+
   # Initialize the project
-  initialize_project
-  
+  if [ -n "$AUTO_PROJECT_NAME" ]; then
+    PROJECT_NAME="$AUTO_PROJECT_NAME"
+    # Remove any spaces and convert to lowercase
+    PROJECT_NAME=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+    echo "Using project name: $PROJECT_NAME"
+
+    # Create a project config file to store variables
+    cat > .project-config <<EOF
+PROJECT_NAME="$PROJECT_NAME"
+CREATED_AT="$(date)"
+EOF
+
+    print_success "Project initialized automatically"
+  else
+    initialize_project
+  fi
+
   # Create resources in each platform
   create_supabase_project
   create_vercel_projects
   create_fly_app
   create_cloudflare_worker
-  
+
   # Deploy all components
   deploy_migrations
   deploy_edge_functions
   deploy_fly_app
   deploy_vercel_projects
-  
+
   # Update local env files with production values
   update_local_env_files
-  
+
   # Display deployment summary
   display_summary
 }
@@ -514,5 +810,91 @@ if [ -f .project-config ]; then
   source .project-config
 fi
 
-# Run the main function
-main
+# Test function for missing API keys
+test_missing_keys() {
+  echo -e "${BOLD}${BLUE}🚀 Testing Missing API Keys Handling 🚀${RESET}"
+
+  # Set test variables with missing keys
+  PROJECT_NAME="saas-test-project"
+  SUPABASE_PROJECT_ID="test-project-id"
+  SUPABASE_URL="https://test-project-id.supabase.co"
+  SUPABASE_ANON_KEY="MISSING_KEY_PLEASE_REPLACE"
+  SUPABASE_SERVICE_KEY="MISSING_KEY_PLEASE_REPLACE"
+  SUPABASE_SERVICE_ROLE_KEY="MISSING_KEY_PLEASE_REPLACE"
+  FLY_APP_NAME="$PROJECT_NAME-backend"
+  FLY_APP_URL="https://$FLY_APP_NAME.fly.dev"
+  CLOUDFLARE_WORKER_NAME="$PROJECT_NAME-worker"
+  CLOUDFLARE_WORKER_URL="https://$CLOUDFLARE_WORKER_NAME.workers.dev"
+  LANDING_PROJECT_NAME="$PROJECT_NAME-landing"
+  LANDING_URL="https://$LANDING_PROJECT_NAME.vercel.app"
+  APP_PROJECT_NAME="$PROJECT_NAME-app"
+  APP_URL="https://$APP_PROJECT_NAME.vercel.app"
+
+  # Create project config file
+  echo "Creating test .project-config file with missing keys..."
+  cat > .project-config <<EOF
+PROJECT_NAME="$PROJECT_NAME"
+CREATED_AT="$(date)"
+SUPABASE_PROJECT_ID="$SUPABASE_PROJECT_ID"
+SUPABASE_URL="$SUPABASE_URL"
+SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+SUPABASE_SERVICE_KEY="$SUPABASE_SERVICE_KEY"
+SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY"
+FLY_APP_NAME="$FLY_APP_NAME"
+FLY_APP_URL="$FLY_APP_URL"
+CLOUDFLARE_WORKER_NAME="$CLOUDFLARE_WORKER_NAME"
+CLOUDFLARE_WORKER_URL="$CLOUDFLARE_WORKER_URL"
+LANDING_PROJECT_NAME="$LANDING_PROJECT_NAME"
+LANDING_URL="$LANDING_URL"
+APP_PROJECT_NAME="$APP_PROJECT_NAME"
+APP_URL="$APP_URL"
+EOF
+
+  # Create .env files
+  update_local_env_files
+
+  # Display created files
+  echo -e "\nCreated .env files with missing keys:"
+  echo "---------------"
+  echo "landing/.env.local:"
+  cat landing/.env.local
+  echo "---------------"
+  echo "app/.env.local:"
+  cat app/.env.local
+  echo "---------------"
+  echo "supabase/.env:"
+  cat supabase/.env
+  echo "---------------"
+  echo "fly/.env:"
+  cat fly/.env
+  echo "---------------"
+  echo "cloudflare/.env:"
+  cat cloudflare/.env
+  echo "---------------"
+
+  print_success "Missing API keys handling test completed"
+}
+
+# Function to automatically run the script with minimal prompts
+auto_run() {
+  # Export auto project name for use in the main function
+  export AUTO_PROJECT_NAME="saas-app-claude"
+
+  # Export auto confirmation for various prompts
+  export AUTO_CONTINUE="y"
+
+  # Run the main function
+  main
+}
+
+# Check for run mode
+if [ "$1" == "--test-env" ]; then
+  test_env_extraction
+elif [ "$1" == "--test-missing-keys" ]; then
+  test_missing_keys
+elif [ "$1" == "--auto" ]; then
+  auto_run
+else
+  # Run the main function
+  main
+fi

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node src/index.js",
+    "dev": "echo 'No development server for fly-backend (requires deployment)'",
     "build": "tsc",
     "start": "node dist/index.js",
     "lint": "eslint ."

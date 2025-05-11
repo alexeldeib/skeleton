@@ -3,8 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler publish"
+    "dev": "echo 'No development server for cloudflare-worker (requires deployment)'",
+    "build": "wrangler build",
+    "deploy": "wrangler deploy",
+    "lint": "eslint ."
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20230518.0",

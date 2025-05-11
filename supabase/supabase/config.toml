@@ -68,20 +68,7 @@ enable_signup = true
 enable_confirmations = true
 
 [auth.external.google]
-enabled = true
-client_id = "env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)"
-secret = "env(SUPABASE_AUTH_GOOGLE_SECRET)"
-# Overrides the default auth redirectUrl.
-redirect_uri = ""
-# Overrides the default auth provider URL. Used to support self-hosted gitlab, single-tenant Azure,
-# or any other third-party OIDC providers.
-url = ""
+enabled = false
 
 [auth.external.github]
-enabled = true
-client_id = "env(SUPABASE_AUTH_GITHUB_CLIENT_ID)"
-secret = "env(SUPABASE_AUTH_GITHUB_SECRET)"
-# Overrides the default auth redirectUrl.
-redirect_uri = ""
-# Overrides the default auth provider URL.
-url = ""
+enabled = false

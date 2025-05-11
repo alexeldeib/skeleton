@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "supabase start",
+    "dev": "supabase start || echo 'Supabase already running or could not be started. Continuing...'",
     "stop": "supabase stop",
     "migrate": "supabase migration up",
     "deploy": "supabase db push",
