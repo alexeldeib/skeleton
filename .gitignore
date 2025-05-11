@@ -42,3 +42,9 @@ supabase/.temp
 .devenv*
 devenv.local.nix
 .direnv
+
+# Playwright
+playwright-report/
+test-results/
+playwright/.cache/
+test-artifacts/
