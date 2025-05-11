@@ -6,25 +6,21 @@
     "landing",
     "app",
     "supabase",
-    "fly",
-    "cloudflare"
+    "backend"
   ],
   "scripts": {
-    "bootstrap": "./bootstrap-dev.sh",
-    "bootstrap:prod": "./bootstrap-production.sh",
+    "setup": "./setup.sh",
+    "setup:prod": "./setup.sh --prod",
+    "deploy": "./setup.sh --deploy",
     "dev": "turbo run dev",
     "build": "turbo run build",
     "start": "turbo run start",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "test": "turbo run test",
-    "test:e2e": "playwright test",
-    "test:auth": "playwright test tests/magic-link-auth.spec.ts",
-    "test:auth:all": "playwright test tests/auth-*.spec.ts tests/magic-link-auth.spec.ts",
-    "test:auth:local": "playwright test tests/auth-local-complete.spec.ts",
-    "test:auth:prod": "playwright test tests/auth-prod-check.spec.ts",
-    "test:auth:mock": "playwright test tests/magic-link-auth.spec.ts",
-    "test:report": "playwright show-report"
+    "test": "./tests/run-tests.sh",
+    "test:auth": "npx playwright test tests/auth.test.js",
+    "test:api": "npx playwright test tests/api.test.js",
+    "test:report": "npx playwright show-report"
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",

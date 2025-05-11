@@ -1,16 +1,12 @@
 {
   "name": "supabase",
-  "version": "0.1.0",
-  "private": true,
+  "version": "1.0.0",
+  "description": "Supabase configuration and migrations",
+  "main": "index.js",
   "scripts": {
-    "dev": "supabase start || echo 'Supabase already running or could not be started. Continuing...'",
-    "stop": "supabase stop",
-    "migrate": "supabase migration up",
-    "deploy": "supabase db push",
-    "generate:types": "supabase gen types typescript --local > src/types/supabase.ts"
+    "dev": "supabase start || echo 'Supabase already running or could not be started. Continuing...'"
   },
-  "devDependencies": {
-    "supabase": "^1.145.4",
-    "typescript": "^5.0.0"
+  "dependencies": {
+    "@supabase/supabase-js": "^2.0.0"
   }
 }

@@ -40,12 +40,8 @@ if [[ -d "fly" ]]; then
   echo -e "${GREEN}Removed fly directory (consolidated to backend)${RESET}"
 fi
 
-if [[ -d "codesandbox" ]]; then
-  rm -rf codesandbox
-  echo -e "${GREEN}Removed codesandbox directory (unused)${RESET}"
-fi
-
 # Remove redundant test files
+# Only remove .spec.ts files, preserving our new .test.js files
 find tests/ -name "*.spec.ts" -delete
 echo -e "${GREEN}Removed old test files (replaced by simplified tests)${RESET}"
 
@@ -75,6 +71,11 @@ if [[ -f "deploy-functions.sh" ]]; then
   echo -e "${GREEN}Removed deploy-functions.sh (incorporated into setup.sh)${RESET}"
 fi
 
+if [[ -f "test-connection.js" ]]; then
+  rm test-connection.js
+  echo -e "${GREEN}Removed test-connection.js (no longer needed)${RESET}"
+fi
+
 # Remove redundant documentation
 if [[ -f "PROMPT.md" ]]; then
   rm PROMPT.md
@@ -95,8 +96,9 @@ fi
 # Create docs directory if it doesn't exist
 mkdir -p docs
 
-# Make setup script executable
+# Make scripts executable
 chmod +x setup.sh
-echo -e "${GREEN}Made setup.sh executable${RESET}"
+chmod +x tests/run-tests.sh
+echo -e "${GREEN}Made scripts executable${RESET}"
 
 echo -e "${YELLOW}Cleanup complete!${RESET}"

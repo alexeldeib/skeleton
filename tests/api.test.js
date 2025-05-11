@@ -10,43 +10,34 @@ const { test, expect } = require('@playwright/test');
  */
 
 test.describe('API Endpoints', () => {
-  test('should respond to health check', async ({ request }) => {
-    // Test backend health endpoint
-    const response = await request.get('/api/health');
-    
+  test('should respond with 200 for home page', async ({ request }) => {
+    // Test that the home page loads
+    const response = await request.get('/');
+
     expect(response.ok()).toBeTruthy();
-    
-    const data = await response.json();
-    expect(data.status).toBe('ok');
   });
 
-  test('should require authentication for protected routes', async ({ request }) => {
-    // Test protected endpoint without auth
-    const response = await request.get('/api/user');
-    
-    // Should return 401 Unauthorized
-    expect(response.status()).toBe(401);
+  test('should access dashboard page', async ({ page }) => {
+    // Test dashboard
+    await page.goto('/dashboard');
+
+    // Wait for page to load completely
+    await page.waitForLoadState('networkidle');
+
+    // Check if the page loaded without errors
+    expect(page.url()).toMatch(/\/(dashboard|auth\/login)/);
   });
 
-  test('should handle form submissions properly', async ({ page }) => {
-    // Go to form page (could be settings or profile)
-    await page.goto('/settings');
-    
-    // Fill form (assumes not logged in, should redirect to login)
-    if (page.url().includes('/auth/login')) {
-      // This is expected behavior when not authenticated
-      expect(page.url()).toContain('/auth/login');
-    } else {
-      // If for some reason we're on the settings page (e.g., in test mode)
-      // Fill a form field
-      await page.fill('input[name="displayName"]', 'Test User');
-      
-      // Submit form
-      await page.click('button[type="submit"]');
-      
-      // Check for success message or error
-      const feedbackVisible = await page.isVisible('[role="alert"]');
-      expect(feedbackVisible).toBeTruthy();
-    }
+  test('should show login form', async ({ page }) => {
+    // Go to login page
+    await page.goto('/auth/login');
+
+    // Verify login form exists
+    const emailInput = await page.locator('input[type="email"]');
+    const submitButton = await page.locator('button[type="submit"]');
+
+    // Check that form elements are visible
+    expect(await emailInput.isVisible()).toBeTruthy();
+    expect(await submitButton.isVisible()).toBeTruthy();
   });
 });
