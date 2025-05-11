@@ -47,14 +47,21 @@
     '';
 
     test.exec = ''
+      # Stop processes that might conflict with tests
+      pkill -f "npm run dev" || true
+      sleep 1
+      # Run tests
       chmod +x tests/run-tests.sh
-      # First terminate any existing app processes to avoid port conflicts
-      lsof -i :3001 -t | xargs kill -9 2>/dev/null || true
       ./tests/run-tests.sh
     '';
 
     # Run only auth tests
     test-auth.exec = ''
+      # Stop any existing app processes
+      pkill -f "npm run dev" || true
+      sleep 1
+
+      # Start the app
       cd app && npm run dev > /dev/null 2>&1 &
       APP_PID=$!
 
@@ -71,13 +78,11 @@
 
       # Run auth tests
       echo "Running auth tests..."
-      npx playwright test tests/auth.test.js
+      npm run test:auth
 
       # Kill app
-      if [[ -n "$APP_PID" ]]; then
-        echo "Stopping app..."
-        kill $APP_PID 2>/dev/null || true
-      fi
+      echo "Stopping app server..."
+      kill $APP_PID 2>/dev/null || true
     '';
 
     build.exec = ''
@@ -90,29 +95,10 @@
   };
 
   # Processes for development
-  # Processes for development (not used in testing)
   processes = {
-    app = {
-      exec = "cd app && npm run dev";
-      # Don't start this process when running tests
-      when = {
-        command_not = ["^devenv test.*"];
-      };
-    };
-    landing = {
-      exec = "cd landing && npm run dev";
-      # Don't start this process when running tests
-      when = {
-        command_not = ["^devenv test.*"];
-      };
-    };
-    supabase = {
-      exec = "cd supabase && npx supabase start";
-      # Allow this to run during tests since it doesn't conflict
-      when = {
-        always = true;
-      };
-    };
+    app.exec = "cd app && npm run dev";
+    landing.exec = "cd landing && npm run dev";
+    supabase.exec = "cd supabase && npx supabase start";
   };
 
   # Entry message when entering shell
