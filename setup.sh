@@ -360,6 +360,17 @@ initialize_git() {
 
 # Main function
 main() {
+  # Check if devenv is available
+  if command_exists devenv; then
+    echo -e "${YELLOW}devenv.sh detected!${RESET}"
+    echo -e "For a fully reproducible development environment, you can use:"
+    echo -e "  ${GREEN}devenv shell${RESET} - Enter the devenv shell"
+    echo -e "  ${GREEN}devenv up${RESET}    - Start all services"
+    echo
+    echo -e "Continuing with standard setup, but consider using devenv.sh for better reproducibility."
+    echo
+  fi
+
   # Process command line arguments
   for arg in "$@"; do
     case $arg in

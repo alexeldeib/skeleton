@@ -85,7 +85,7 @@ devenv up supabase # Start just Supabase
 
 Our devenv.nix configuration includes:
 
-- Node.js 18 and npm
+- Node.js 22 (LTS) and npm
 - TypeScript
 - PostgreSQL 15
 - Docker

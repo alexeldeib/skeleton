@@ -3,7 +3,7 @@
 {
   # Enable devenv for this project
   packages = with pkgs; [
-    nodejs_18
+    nodejs
     nodePackages.npm
     nodePackages.typescript
     nodePackages.pnpm
@@ -15,6 +15,9 @@
   # Set environment variables
   env.NEXT_TELEMETRY_DISABLED = "1"; # Disable Next.js telemetry
   env.NODE_ENV = "development";
+
+  # Enable dotenv integration
+  dotenv.enable = true;
   
   # Define language support
   languages = {
