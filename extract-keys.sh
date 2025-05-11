@@ -85,6 +85,9 @@ CREATED_AT="$(date)"
 SUPABASE_PROJECT_ID="$SUPABASE_PROJECT_ID"
 SUPABASE_URL="$SUPABASE_URL"
 # API keys are stored in .env.keys for security
+SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+SUPABASE_SERVICE_KEY="$SUPABASE_SERVICE_ROLE_KEY"
+SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY"
 EOF
 
 print_success ".project-config created (ensure this file is gitignored)"
